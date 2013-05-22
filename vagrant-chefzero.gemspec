@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["jfoy@whitepages.com"]
   spec.description   = %q{Vagrant chef-zero provisioner plugin}
   spec.summary       = %q{Ease use of chef-zero in the Vagrant provisioning lifecycle}
-  spec.homepage      = ""
+  spec.homepage      = "http://github.dev.pages/ait/vagrant-chefzero"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files`.split($/)

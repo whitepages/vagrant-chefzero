@@ -5,32 +5,59 @@ module Vagrant
     class Plugin < Vagrant.plugin("2")
       name 'chefzero'
 
+      config('chefzero', :provisioner) do
+        Config
+      end
+
       provisioner 'chefzero' do
-        class Provisioner
-          attr_accessor :root_path
-
-          def initialize(machine, config)
-            @root_path = machine.env.root_path
-          end
-
-          def configure(root_config)
-            # system 'chef-zero -H 172.26.10.84 -p 8889 &'
-            # system 'sleep 2'
-
-            system(".bin/knife data bag show users global -F json > /tmp/global.json")
-            system(".bin/knife data bag create users -c my-knife.rb")
-            system(".bin/knife data bag from file users /tmp/global.json -c my-knife.rb")
-
-            system 'berks install'
-            system 'berks upload -c berkshelf-chef-zero.config.json'
-          end
-
-          def provision
-          end
-        end
-
         Provisioner
       end
+
+##      provider 'hostnative' do
+##        Provider
+##      end
     end
+
+##    class Provider < Vagrant.plugin("2", :provider)
+##      def initialize(machine)
+##        super
+##      end
+##
+##      def action(action_name)
+##      end
+##
+##      private
+##      def up; end
+##      def halt; end
+##      def destroy; end
+##
+##    end
+
+    class Config < Vagrant.plugin("2", :config)
+      attr_accessor :shell_setup
+
+      def initialize
+        self.shell_setup = UNSET_VALUE
+      end
+
+      def finalize!
+        shell_setup = '' if shell_setup == UNSET_VALUE
+      end
+    end
+
+    class Provisioner < Vagrant.plugin("2", :provisioner)
+      def initialize(machine, config)
+        super
+      end
+
+      def configure(root_config)
+      end
+
+      def provision
+        cmds = config.shell_setup.split(/\n/)
+        cmds.each { |cmd| system cmd }
+      end
+    end
+
   end
 end
