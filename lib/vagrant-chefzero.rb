@@ -1,4 +1,4 @@
-require 'chefzero/version'
+require 'vagrant-chefzero/version'
 
 module Vagrant
   module Chefzero
