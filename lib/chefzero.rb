@@ -2,6 +2,10 @@ require 'chefzero/version'
 
 module Vagrant
   module Chefzero
+    module Error
+      class MissingProperty < StandardError; end
+    end
+
     class Plugin < Vagrant.plugin("2")
       name 'chefzero'
 
@@ -13,46 +17,67 @@ module Vagrant
         Provisioner
       end
 
-##      provider 'hostnative' do
-##        Provider
-##      end
     end
 
-##    class Provider < Vagrant.plugin("2", :provider)
-##      def initialize(machine)
-##        super
-##      end
-##
-##      def action(action_name)
-##      end
-##
-##      private
-##      def up; end
-##      def halt; end
-##      def destroy; end
-##
-##    end
-
     class Config < Vagrant.plugin("2", :config)
-      attr_accessor :chef_zero_ip
-      attr_accessor :chef_zero_port
+      attr_accessor :ip
+      attr_accessor :port
       attr_accessor :setup
+      attr_accessor :version
 
       def initialize
-        self.chef_zero_ip = UNSET_VALUE
-        self.chef_zero_port = UNSET_VALUE
+        self.ip = UNSET_VALUE
+        self.port = UNSET_VALUE
+        self.version = UNSET_VALUE
         self.setup = UNSET_VALUE
       end
 
       def finalize!
-        if setup == UNSET_VALUE
-          setup = lambda {}
+        if self.setup == UNSET_VALUE
+          self.setup = lambda {}
         end
+        if self.version == UNSET_VALUE
+          self.version = default_chef_zero_version
+        end
+        [:ip, :port].each do |req|
+          raise Error::MissingProperty, "chefzero provisioner missing required property '#{req}'" unless send(req)
+        end
+      end
+
+      def default_chef_zero_version
+        '1.0.1'
       end
 
       def setup(&block)
         @setup = block unless block.nil?
         @setup
+      end
+    end
+
+    # Adapted from the vagrant chef-client provisioner plugin
+    class MachineRunner
+      attr_accessor :machine
+
+      def initialize(machine)
+        self.machine = machine
+      end
+
+      def test(command)
+        machine.communicate.test(command) { |type, data| show_output(type, data) }
+      end
+
+      def do(command)
+        machine.communicate.sudo(command, :error_check => false) { |type, data| show_output(type, data) }
+      end
+
+      private
+
+      def show_output(type, data)
+        # Output the data with the proper color based on the stream.
+        color = type == :stdout ? :green : :red
+
+        # Note: Be sure to chomp the data to avoid newlines
+        machine.env.ui.info(data.chomp, :color => color)
       end
     end
 
@@ -62,12 +87,14 @@ module Vagrant
       end
 
       def configure(root_config)
+        super
       end
 
       def provision
-        FileUtils.mkdir_p(generated_dir)
+        FileUtils.mkdir_p(generated_path)
         generate_knife
         generate_config
+        install_chef_zero
 
         config.setup.call(self)
       end
@@ -84,35 +111,45 @@ module Vagrant
       end
 
       def import_berkshelf_cookbooks(o = {})
-        if o[:path]
-          system "BERKSHELF_PATH=#{o[:path]} berks install" # Use user's own Chef credentials
-          system "BERKSHELF_PATH=#{o[:path]} berks upload -c #{gen_config}"
-        else
-          system "berks install"
-          system "berks upload -c #{gen_config}"
-        end
+        path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
+
+        system "#{path_env}berks install" # Use user's own Chef credentials
+        system "#{path_env}berks upload -c #{gen_config}"
       end
 
       private
 
-      # Must be on host -- depends on user's credentials
-      # knife data bag show users global -F json > gen-global.json
-      # berks install --path vendor/cookbooks
-      # # Could be on guest, if berks had a new-enough Ruby
-      # knife data bag create users -c gen-knife.rb
-      # knife data bag from file users gen-global.json -c gen-knife.rb
-      # BERKSHELF_PATH=vendor/cookbooks berks upload -c gen-config.json
+      def install_chef_zero
+        m = MachineRunner.new(machine)
+        puts "installing chef zero"
+
+        puts "install debian packages"
+        m.test('dpkg -l build-essential | grep ^ii > /dev/null') ||
+          m.do('apt-get install -y build-essential')
+
+        puts "install gems"
+        m.test("gem list --installed chef-zero -v #{config.version} > /dev/null") ||
+          m.do("gem install chef-zero --no-rdoc --no-ri -v #{config.version}")
+
+        puts "start chef-zero service"
+        m.test('ps -C chef-zero > /dev/null') ||
+          m.do("chef-zero -H #{config.ip} -p #{config.port} > /vagrant/#{generated_dir}/chef-zero.log 2>&1 &")
+      end
 
       def root_path
         machine.env.root_path
       end
 
       def generated_dir
-        File.join(root_path, '.vagrant-chef-zero')
+        '.vagrant-chef-zero'
+      end
+
+      def generated_path
+        File.join(root_path, generated_dir)
       end
 
       def generated(basename)
-        File.join(generated_dir, basename)
+        File.join(generated_path, basename)
       end
 
       def pemfile
@@ -120,7 +157,7 @@ module Vagrant
       end
 
       def chef_zero_uri
-        "http://#{config.chef_zero_ip}:#{config.chef_zero_port}"
+        "http://#{config.ip}:#{config.port}"
       end
 
       def node_name
@@ -165,3 +202,26 @@ client_key '#{pemfile}'
 
   end
 end
+
+
+## Future enhancement:
+##    class Plugin < Vagrant.plugin("2")
+##      name 'hostnative'
+##      provider 'hostnative' do
+##        Provider
+##      end
+##    end
+##    class Provider < Vagrant.plugin("2", :provider)
+##      def initialize(machine)
+##        super
+##      end
+##
+##      def action(action_name)
+##      end
+##
+##      private
+##      def up; end
+##      def halt; end
+##      def destroy; end
+##
+##    end
