@@ -1,4 +1,5 @@
 require 'vagrant-chefzero/version'
+require 'ridley'
 
 module Vagrant
   module Chefzero
@@ -99,20 +100,23 @@ module Vagrant
         config.setup.call(self)
       end
 
-      def import_data_bag(o = {})
-        o.each_pair do |bag, item|
-          Dir.mktmpdir do |dir|
-            fname = "#{dir}/#{bag}-#{item}.json"
-            system "knife data bag show #{bag} #{item} -F json > #{fname}" # Use user's own Chef credentials
-            system "knife data bag create #{bag} -c #{gen_knife}"
-            system "knife data bag from file #{bag} #{fname} -c #{gen_knife}"
-          end
-        end
+      def import_data_bag_item(creds, bag_name, item_name)
+        user_ridley = Ridley.new(creds)
+        zero_ridley = Ridley.new(server_url: chef_zero_uri, client_name: node_name, client_key: pemfile)
+
+        contents = user_ridley.data_bag.find(bag_name).item.find(item_name)
+        databag = zero_ridley.data_bag.find(bag_name) || zero_ridley.data_bag.create(name: bag_name)
+        databag.item.find(item_name) ? databag.item.update(contents) : databag.item.create(contents)
       end
 
       def import_berkshelf_cookbooks(o = {})
-        path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
+        # require 'berkshelf'
+        # user_berks = Berkshelf::Cli.new
+        # user_berks.install
 
+        # zero_berks = Berkshelf::Cli.new(:config => gen_config)
+        # zero_berks.upload
+        path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
         system "#{path_env}berks install" # Use user's own Chef credentials
         system "#{path_env}berks upload -c #{gen_config}"
       end
@@ -121,17 +125,13 @@ module Vagrant
 
       def install_chef_zero
         m = MachineRunner.new(machine)
-        puts "installing chef zero"
 
-        puts "install debian packages"
         m.test('dpkg -l build-essential | grep ^ii > /dev/null') ||
           m.do('apt-get install -y build-essential')
 
-        puts "install gems"
         m.test("gem list --installed chef-zero -v #{config.version} > /dev/null") ||
           m.do("gem install chef-zero --no-rdoc --no-ri -v #{config.version}")
 
-        puts "start chef-zero service"
         m.test('ps -C chef-zero > /dev/null') ||
           m.do("chef-zero -H #{config.ip} -p #{config.port} > /vagrant/#{generated_dir}/chef-zero.log 2>&1 &")
       end
