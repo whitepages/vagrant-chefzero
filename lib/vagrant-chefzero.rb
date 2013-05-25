@@ -1,8 +1,9 @@
 require 'vagrant-chefzero/version'
 require 'ridley'
+require 'berkshelf'
 
 module Vagrant
-  module Chefzero
+  module ChefzeroPlugin
     module Error
       class MissingProperty < StandardError; end
     end
@@ -55,33 +56,6 @@ module Vagrant
       end
     end
 
-    # Adapted from the vagrant chef-client provisioner plugin
-    class MachineRunner
-      attr_accessor :machine
-
-      def initialize(machine)
-        self.machine = machine
-      end
-
-      def test(command)
-        machine.communicate.test(command) { |type, data| show_output(type, data) }
-      end
-
-      def do(command)
-        machine.communicate.sudo(command, :error_check => false) { |type, data| show_output(type, data) }
-      end
-
-      private
-
-      def show_output(type, data)
-        # Output the data with the proper color based on the stream.
-        color = type == :stdout ? :green : :red
-
-        # Note: Be sure to chomp the data to avoid newlines
-        machine.env.ui.info(data.chomp, :color => color)
-      end
-    end
-
     class Provisioner < Vagrant.plugin("2", :provisioner)
       def initialize(machine, config)
         super
@@ -93,35 +67,53 @@ module Vagrant
 
       def provision
         FileUtils.mkdir_p(generated_path)
-        generate_knife
-        generate_config
         install_chef_zero
 
         config.setup.call(self)
       end
 
-      def import_data_bag_item(creds, bag_name, item_name)
-        user_ridley = Ridley.new(creds)
-        zero_ridley = Ridley.new(server_url: chef_zero_uri, client_name: node_name, client_key: pemfile)
-
+      def import_data_bag_item(bag_name, item_name)
+        user_ridley = ridley(user_creds)
         contents = user_ridley.data_bag.find(bag_name).item.find(item_name)
+
+        zero_ridley = ridley(zero_creds)
         databag = zero_ridley.data_bag.find(bag_name) || zero_ridley.data_bag.create(name: bag_name)
         databag.item.find(item_name) ? databag.item.update(contents) : databag.item.create(contents)
       end
 
       def import_berkshelf_cookbooks(o = {})
-        # require 'berkshelf'
-        # user_berks = Berkshelf::Cli.new
-        # user_berks.install
-
-        # zero_berks = Berkshelf::Cli.new(:config => gen_config)
-        # zero_berks.upload
-        path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
-        system "#{path_env}berks install" # Use user's own Chef credentials
-        system "#{path_env}berks upload -c #{gen_config}"
+        # path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
+        # ENV['BERKSHELF_PATH'] = generated_path
+        berks(user_creds).install
+        berks(zero_creds).upload
       end
 
       private
+
+      def ridley(creds)
+        Ridley.new(creds)
+      end
+
+      def berks(creds)
+        BerkshelfActor.new(creds: creds, path: generated_path)
+      end
+
+      def user_creds
+        c = Berkshelf::Chef::Config.instance
+        {
+          server_url: c[:chef_server_url],
+          client_name: c[:node_name],
+          client_key: c[:client_key],
+        }
+      end
+
+      def zero_creds
+        {
+          server_url: chef_zero_uri,
+          client_name: node_name,
+          client_key: pemfile,
+        }
+      end
 
       def install_chef_zero
         m = MachineRunner.new(machine)
@@ -148,10 +140,6 @@ module Vagrant
         File.join(root_path, generated_dir)
       end
 
-      def generated(basename)
-        File.join(generated_path, basename)
-      end
-
       def pemfile
         File.expand_path('vagrant-knife.pem', File.join(File.dirname(__FILE__), '..'))
       end
@@ -163,40 +151,67 @@ module Vagrant
       def node_name
         'vagrant-knife'
       end
+    end
 
-      def gen_knife
-        generated('knife.rb')
+    class BerkshelfActor
+      # Note: the Berksfile object is stateful, and must not be cached across
+      # interactions with different Chef servers (e.g. install vs. upload)
+
+      def initialize(o = {})
+        @berksfile_path = o.fetch(:berksfile_path) { default_path }
+        @creds = o.fetch(:creds)
+        # @path = o.fetch(:path)
       end
 
-      def gen_config
-        generated('config.json')
+      def install
+        # berksfile.install(@creds.merge(path: @path))
+        berksfile.install(@creds)
       end
 
-      def generate_knife
-        File.open(gen_knife, 'w') do |f|
-          f.puts(<<-EOT)
-chef_server_url '#{chef_zero_uri}'
-node_name '#{node_name}'
-client_key '#{pemfile}'
-          EOT
-        end
+      def upload
+        defaults = {
+          ssl: { verify: false },
+          force: false,
+          freeze: false,
+        }
+        berksfile.upload(@creds.merge(defaults))
       end
 
-      def generate_config
-        File.open(gen_config, 'w') do |f|
-          f.puts(<<-EOT)
-{
-  "chef":{
-    "chef_server_url":"#{chef_zero_uri}",
-    "node_name":"#{node_name}",
-    "client_key":"#{pemfile}"
-  },
-  "ssl":{
-    "verify":false
-  }
-}
-          EOT
-        end
+      private
+
+      def default_path
+        File.join(Dir.pwd, Berkshelf::DEFAULT_FILENAME)
+      end
+
+      def berksfile
+        Berkshelf::Berksfile.from_file(@berksfile_path)
+      end
+    end
+
+    # Adapted from the vagrant chef-client provisioner plugin
+    class MachineRunner
+      attr_accessor :machine
+
+      def initialize(machine)
+        self.machine = machine
+      end
+
+      def test(command)
+        machine.communicate.test(command) { |type, data| show_output(type, data) }
+      end
+
+      def do(command)
+        machine.communicate.sudo(command, :error_check => false) { |type, data| show_output(type, data) }
+      end
+
+      private
+
+      def show_output(type, data)
+        # Output the data with the proper color based on the stream.
+        color = type == :stdout ? :green : :red
+
+        # Note: Be sure to chomp the data to avoid newlines
+        machine.env.ui.info(data.chomp, :color => color)
       end
     end
 
