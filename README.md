@@ -17,6 +17,7 @@ Sample Vagrantfile:
         config.ssh.max_tries = 40
         config.ssh.timeout   = 120
         config.vm.box = 'precise64'
+        config.vm.box_url = 'http://files.vagrantup.com/precise64.box'
 
         config.vm.define :chefzero do |chefzero|
           chefzero.vm.network :private_network, ip: chef_zero_ip
