@@ -8,6 +8,8 @@ vagrant plugin install vagrant-chefzero --plugin-source http://rubygems.util.pag
 
 ## Usage
 
+Sample Vagrantfile:
+
 chef_zero_ip = '33.33.33.10'
 chef_zero_port = '8889'
 
