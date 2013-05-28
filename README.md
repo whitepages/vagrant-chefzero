@@ -1,29 +1,45 @@
 # Vagrant::Chefzero
 
-TODO: Write a gem description
+A Vagrant plugin for integration with chef-zero: https://github.com/jkeiser/chef-zero
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
-    gem 'vagrant-chefzero'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install vagrant-chefzero
+vagrant plugin install vagrant-chefzero --plugin-source http://rubygems.util.pages --plugin-source http://rubygems.org
 
 ## Usage
 
-TODO: Write usage instructions here
+chef_zero_ip = '33.33.33.10'
+chef_zero_port = '8889'
 
-## Contributing
+Vagrant.configure("2") do |config|
+  config.ssh.max_tries = 40
+  config.ssh.timeout   = 120
+  config.vm.box = 'precise64'
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+  config.vm.define :chefzero do |chefzero|
+    chefzero.vm.network :private_network, ip: chef_zero_ip
+
+    chefzero.vm.provision :chefzero do |cz|
+      cz.ip = chef_zero_ip
+      cz.port = chef_zero_port
+      cz.setup do |p|
+        p.import_data_bag_item(:users, :global)
+        p.import_berkshelf_cookbooks
+      end
+    end
+  end
+
+  config.vm.define :target do |target|
+    target.vm.hostname = "stuff.dev.pages"
+    target.vm.network :private_network, ip: "33.33.33.20"
+
+    target.vm.provision :chef_client do |chef|
+      chef.chef_server_url = "http://#{chef_zero_ip}:#{chef_zero_port}"
+      chef.validation_key_path = "my-knife.pem"
+
+      #The recipe we actually care about.
+      chef.add_recipe "my-cookbook::server"
+    end
+  end
+
+end
