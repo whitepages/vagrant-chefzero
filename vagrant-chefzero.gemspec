@@ -21,6 +21,17 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'ridley', '~> 0.12'
   spec.add_runtime_dependency 'berkshelf', '~> 1.4'
 
+  #Dependencies from vagrant.
+  #Our dependencies need to be compatible with Vagrant's.
+  spec.add_dependency "childprocess", "~> 0.3.7"
+  spec.add_dependency "erubis", "~> 2.7.0"
+  spec.add_dependency "i18n", "~> 0.6.0"
+  spec.add_dependency "json", ">= 1.5.1", "< 1.8.0"
+  spec.add_dependency "log4r", "~> 1.1.9"
+  spec.add_dependency "net-ssh", "~> 2.6.6"
+  spec.add_dependency "net-scp", "~> 1.1.0"
+
+
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "rake"
 end
