@@ -18,20 +18,29 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
+  ######## From vagrant-berkshelf 1.2.0:
+  # activesupport 3.2.13 contains an incompatible hard lock on i18n (= 0.6.1)
+  spec.add_runtime_dependency 'activesupport', '~> 3.2', '< 3.2.13'
+
   spec.add_runtime_dependency 'ridley', '~> 0.12'
   spec.add_runtime_dependency 'berkshelf', '~> 1.4'
 
-  spec.add_runtime_dependency 'i18n', '= 0.6.4'
+  # Explicit locks to ensure we activate the proper gem versions for Vagrant
+#  spec.add_runtime_dependency "i18n", "~> 0.6.0"
+#  spec.add_runtime_dependency "json", ">= 1.5.1", "< 1.8.0"
+#  spec.add_runtime_dependency "net-ssh", "~> 2.6.6"
+#  spec.add_runtime_dependency "net-scp", "~> 1.1.0"
+  ########
 
   #Dependencies from vagrant.
   #Our dependencies need to be compatible with Vagrant's.
-  spec.add_dependency "childprocess", "~> 0.3.7"
-  spec.add_dependency "erubis", "~> 2.7.0"
-  spec.add_dependency "i18n", "~> 0.6.0"
-  spec.add_dependency "json", ">= 1.5.1", "< 1.8.0"
-  spec.add_dependency "log4r", "~> 1.1.9"
-  spec.add_dependency "net-ssh", "~> 2.6.6"
-  spec.add_dependency "net-scp", "~> 1.1.0"
+#  spec.add_dependency "childprocess", "~> 0.3.7"
+#  spec.add_dependency "erubis", "~> 2.7.0"
+#  spec.add_dependency "i18n", "~> 0.6.0"
+#  spec.add_dependency "json", ">= 1.5.1", "< 1.8.0"
+#  spec.add_dependency "log4r", "~> 1.1.9"
+#  spec.add_dependency "net-ssh", "~> 2.6.6"
+#  spec.add_dependency "net-scp", "~> 1.1.0"
 
 
   spec.add_development_dependency "bundler", "~> 1.3"
