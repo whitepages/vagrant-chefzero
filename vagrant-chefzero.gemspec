@@ -21,6 +21,8 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'ridley', '~> 0.12'
   spec.add_runtime_dependency 'berkshelf', '~> 1.4'
 
+  spec.add_runtime_dependency 'i18n', '= 0.6.4'
+
   #Dependencies from vagrant.
   #Our dependencies need to be compatible with Vagrant's.
   spec.add_dependency "childprocess", "~> 0.3.7"
