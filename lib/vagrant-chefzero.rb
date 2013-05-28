@@ -83,7 +83,7 @@ module Vagrant
 
       def import_berkshelf_cookbooks(o = {})
         # path_env = o[:path] ? "BERKSHELF_PATH=#{o[:path]} " : ''
-        # ENV['BERKSHELF_PATH'] = generated_path
+        ENV['BERKSHELF_PATH'] = generated_path
         berks(user_creds).install
         berks(zero_creds).upload
       end
