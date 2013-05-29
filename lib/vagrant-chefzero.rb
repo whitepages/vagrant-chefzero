@@ -26,12 +26,14 @@ module Vagrant
       attr_accessor :port
       attr_accessor :setup
       attr_accessor :version
+      attr_accessor :ca_file
 
       def initialize
         self.ip = UNSET_VALUE
         self.port = UNSET_VALUE
         self.version = UNSET_VALUE
         self.setup = UNSET_VALUE
+        self.ca_file = UNSET_VALUE
       end
 
       def finalize!
@@ -44,6 +46,7 @@ module Vagrant
         [:ip, :port].each do |req|
           raise Error::MissingProperty, "chefzero provisioner missing required property '#{req}'" unless send(req)
         end
+        self.ca_file = nil if self.ca_file == UNSET_VALUE
       end
 
       def default_chef_zero_version
@@ -90,8 +93,14 @@ module Vagrant
 
       private
 
+      def ssl_opts
+        ssl_opts = { verify: true }
+        ssl_opts[:ca_file] = config.ca_file if config.ca_file
+        ssl_opts
+      end
+
       def ridley(creds)
-        Ridley.new(creds)
+        Ridley.new(creds.merge( ssl: ssl_opts ))
       end
 
       def berks(creds)
