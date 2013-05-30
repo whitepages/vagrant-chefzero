@@ -1,6 +1,7 @@
 # Vagrant::Chefzero
 
-A Vagrant plugin for integration with chef-zero: https://github.com/jkeiser/chef-zero
+A Vagrant plugin for integration with chef-zero:
+https://github.com/jkeiser/chef-zero
 
 ## Installation
 
@@ -45,3 +46,7 @@ Sample Vagrantfile:
           end
         end
       end
+
+When the provisioner runs, it will generate a Knife configuration file
+.vagrant-chef-zero/knife.rb appropriate for interacting with the chef-zero
+instance.
