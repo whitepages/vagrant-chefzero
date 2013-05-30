@@ -74,6 +74,7 @@ module Vagrant
       def provision
         FileUtils.mkdir_p(generated_path)
         install_chef_zero
+        gen_knife_rb
 
         config.setup.call(self)
       end
@@ -155,6 +156,16 @@ module Vagrant
 
       def generated_path
         File.join(root_path, generated_dir)
+      end
+
+      def gen_knife_rb
+        File.open(File.join(generated_path, 'knife.rb'), 'w') do |f|
+          f.puts(<<-EOT)
+chef_server_url '#{chef_zero_uri}'
+node_name '#{node_name}'
+client_key '#{pemfile}'
+          EOT
+        end
       end
 
       def pemfile
