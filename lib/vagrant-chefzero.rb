@@ -130,6 +130,11 @@ module Vagrant
       def install_chef_zero
         m = MachineRunner.new(machine)
 
+        m.do('apt-get update')
+
+        m.test('dpkg -l ruby1.9.3 | grep ^ii > /dev/null') ||
+          m.do('apt-get install -y ruby1.9.3')
+
         m.test('dpkg -l build-essential | grep ^ii > /dev/null') ||
           m.do('apt-get install -y build-essential')
 
