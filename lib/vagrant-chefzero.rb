@@ -26,14 +26,16 @@ module Vagrant
       attr_accessor :port
       attr_accessor :setup
       attr_accessor :version
+      attr_accessor :verify_ssl
       attr_accessor :ca_file
 
       def initialize
-        self.ip = UNSET_VALUE
-        self.port = UNSET_VALUE
-        self.version = UNSET_VALUE
-        self.setup = UNSET_VALUE
-        self.ca_file = UNSET_VALUE
+        self.ip         = UNSET_VALUE
+        self.port       = UNSET_VALUE
+        self.version    = UNSET_VALUE
+        self.setup      = UNSET_VALUE
+        self.ca_file    = UNSET_VALUE
+        self.verify_ssl = UNSET_VALUE
       end
 
       def finalize!
@@ -47,6 +49,7 @@ module Vagrant
           raise Error::MissingProperty, "chefzero provisioner missing required property '#{req}'" unless send(req)
         end
         self.ca_file = nil if self.ca_file == UNSET_VALUE
+        self.verify_ssl = false if self.verify_ssl == UNSET_VALUE
       end
 
       def default_chef_zero_version
@@ -94,7 +97,7 @@ module Vagrant
       private
 
       def ssl_opts
-        ssl_opts = { verify: true }
+        ssl_opts = { verify: config.verify_ssl }
         ssl_opts[:ca_file] = config.ca_file if config.ca_file
         ssl_opts
       end
@@ -104,7 +107,7 @@ module Vagrant
       end
 
       def berks(creds)
-        BerkshelfActor.new(creds: creds, path: generated_path)
+        BerkshelfActor.new(creds: creds, path: generated_path, verify_ssl: config.verify_ssl)
       end
 
       def user_creds
@@ -169,17 +172,16 @@ module Vagrant
       def initialize(o = {})
         @berksfile_path = o.fetch(:berksfile_path) { default_path }
         @creds = o.fetch(:creds)
-        # @path = o.fetch(:path)
+        Berkshelf::Config.instance.ssl = OpenStruct.new( verify: o[:verify_ssl] )
       end
 
       def install
-        # berksfile.install(@creds.merge(path: @path))
         berksfile.install(@creds)
       end
 
       def upload
         defaults = {
-          ssl: { verify: false },
+          ssl: { verify: false }, # Always false for chef-zero
           force: false,
           freeze: false,
         }
