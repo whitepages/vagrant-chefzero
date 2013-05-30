@@ -109,7 +109,7 @@ client_key '#{pemfile}'
       end
 
       def pemfile
-        File.expand_path('vagrant-knife.pem', File.join(File.dirname(__FILE__), '..'))
+        File.expand_path('vagrant-knife.pem', File.join(File.dirname(__FILE__), '..', '..'))
       end
 
       def chef_zero_uri
