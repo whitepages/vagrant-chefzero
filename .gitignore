@@ -17,3 +17,5 @@ test/version_tmp
 tmp
 .bin
 vendor
+/chefzero.box
+/.vagrant/machines/default/virtualbox/id
