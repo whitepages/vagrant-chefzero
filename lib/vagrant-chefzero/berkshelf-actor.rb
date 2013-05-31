@@ -1,4 +1,4 @@
-require 'vagrant-berkshelf'
+require 'vagrant-chefzero'
 
 module Vagrant
   module ChefzeroPlugin
