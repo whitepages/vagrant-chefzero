@@ -6,8 +6,8 @@ require 'vagrant-chefzero/version'
 Gem::Specification.new do |spec|
   spec.name          = "vagrant-chefzero"
   spec.version       = Vagrant::ChefzeroPlugin::VERSION
-  spec.authors       = ["Jack Foy"]
-  spec.email         = ["jfoy@whitepages.com"]
+  spec.authors       = ["Jack Foy", "Jeff Bellegarde"]
+  spec.email         = ["jfoy@whitepages.com", "jbellegarde@whitepages.com"]
   spec.description   = %q{Vagrant chef-zero provisioner plugin}
   spec.summary       = %q{Ease use of chef-zero in the Vagrant provisioning lifecycle}
   spec.homepage      = "http://github.dev.pages/ait/vagrant-chefzero"
