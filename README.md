@@ -5,7 +5,7 @@ https://github.com/jkeiser/chef-zero
 
 ## Installation
 
-vagrant plugin install vagrant-chefzero --plugin-source http://rubygems.util.pages --plugin-source http://rubygems.org
+vagrant plugin install vagrant-chefzero
 
 ## Usage
 
