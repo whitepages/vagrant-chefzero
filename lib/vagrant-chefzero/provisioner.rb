@@ -2,6 +2,11 @@ require 'vagrant-chefzero'
 
 module Vagrant
   module ChefzeroPlugin
+
+    def self.pemfile
+      File.expand_path('vagrant-knife.pem', File.join(File.dirname(__FILE__), '..', '..'))
+    end
+
     class Provisioner < Vagrant.plugin("2", :provisioner)
       def initialize(machine, config)
         super
@@ -109,7 +114,7 @@ client_key '#{pemfile}'
       end
 
       def pemfile
-        File.expand_path('vagrant-knife.pem', File.join(File.dirname(__FILE__), '..', '..'))
+        ChefzeroPlugin.pemfile
       end
 
       def chef_zero_uri
