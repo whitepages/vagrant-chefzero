@@ -17,11 +17,11 @@ Sample Vagrantfile:
       Vagrant.configure("2") do |config|
         config.ssh.max_tries = 40
         config.ssh.timeout   = 120
-        config.vm.box = 'precise64'
-        config.vm.box_url = 'http://files.vagrantup.com/precise64.box'
 
         config.vm.define :chefzero do |chefzero|
           chefzero.vm.network :private_network, ip: chef_zero_ip
+          chefzero.vm.box = 'precise64'
+          chefzero.vm.box_url = 'http://files.vagrantup.com/precise64.box'
 
           chefzero.vm.provision :chefzero do |cz|
             cz.ip = chef_zero_ip
@@ -36,10 +36,12 @@ Sample Vagrantfile:
         config.vm.define :target do |target|
           target.vm.hostname = "stuff.dev.pages"
           target.vm.network :private_network, ip: "33.33.33.20"
+          target.vm.box = 'precise64'
+          target.vm.box_url = 'http://files.vagrantup.com/precise64.box'
 
           target.vm.provision :chef_client do |chef|
             chef.chef_server_url = "http://#{chef_zero_ip}:#{chef_zero_port}"
-            chef.validation_key_path = "my-knife.pem"
+            chef.validation_key_path = Vagrant::ChefzeroPlugin.pemfile
 
             #The recipe we actually care about.
             chef.add_recipe "my-cookbook::server"
