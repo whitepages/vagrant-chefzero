@@ -42,6 +42,7 @@ Sample Vagrantfile:
           target.vm.provision :chef_client do |chef|
             chef.chef_server_url = "http://#{chef_zero_ip}:#{chef_zero_port}"
             chef.validation_key_path = Vagrant::ChefzeroPlugin.pemfile
+            chef.add_recipe "wp-vagrant"
 
             #The recipe we actually care about.
             chef.add_recipe "my-cookbook::server"
