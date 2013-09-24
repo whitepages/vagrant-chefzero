@@ -57,11 +57,11 @@ module Vagrant
       end
 
       def user_creds
-        c = Berkshelf::Chef::Config.instance
+        c = Berkshelf.chef_config
         {
-          server_url: c[:chef_server_url],
-          client_name: c[:node_name],
-          client_key: c[:client_key],
+          server_url: c.chef_server_url,
+          client_name: c.node_name,
+          client_key: c.client_key,
         }
       end
 
